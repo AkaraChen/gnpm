@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/user/fnpm/internal/context"
-	"github.com/user/fnpm/internal/logger"
+	"github.com/AkaraChen/gnpm/internal/context"
+	"github.com/AkaraChen/gnpm/internal/logger"
 )
 
 // RunOptions for running scripts

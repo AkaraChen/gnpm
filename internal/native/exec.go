@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/user/fnpm/internal/logger"
+	"github.com/AkaraChen/gnpm/internal/logger"
 )
 
 // ExecOptions for executing binaries

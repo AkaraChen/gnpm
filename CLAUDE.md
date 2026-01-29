@@ -5,8 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Test Commands
 
 ```bash
-go build ./cmd/fnpm          # Build binary to current directory
-make build                   # Build to bin/fnpm
+go build ./cmd/gnpm          # Build binary to current directory
+make build                   # Build to bin/gnpm
 make test                    # Run all tests
 go test ./internal/pmcombo   # Run tests for specific package
 go test -run TestAddCommand ./internal/pmcombo  # Run single test
@@ -17,13 +17,13 @@ make install                 # Install to $GOPATH/bin
 
 ## Architecture
 
-fnpm is a unified CLI that wraps npm, yarn, pnpm, deno, and bun. It detects the package manager from lock files and translates commands.
+gnpm is a unified CLI that wraps npm, yarn, pnpm, deno, and bun. It detects the package manager from lock files and translates commands.
 
 ### Two Execution Paths
 
 Commands fall into two categories:
 
-1. **PM Delegation** (`pmcombo` → `runner.Run`): Translates fnpm commands to PM-specific commands and executes via the detected package manager. Used by: add, remove, install, ci, update, dlx, create, scaffold, publish, why.
+1. **PM Delegation** (`pmcombo` → `runner.Run`): Translates gnpm commands to PM-specific commands and executes via the detected package manager. Used by: add, remove, install, ci, update, dlx, create, scaffold, publish, why.
 
 2. **Native Go** (`native.*`): Implements functionality directly in Go without calling a PM. Used by: run, test, exec, init, config, registry.
 
@@ -49,7 +49,7 @@ Commands fall into two categories:
 ### Command Flow
 
 ```
-fnpm <cmd> [args]
+gnpm <cmd> [args]
     │
     ├─► PM delegation path
     │   CLI → pmcombo.Concat(pm) → runner.Run(pm, args)

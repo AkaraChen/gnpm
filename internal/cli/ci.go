@@ -3,8 +3,8 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/user/fnpm/internal/pmcombo"
-	"github.com/user/fnpm/internal/runner"
+	"github.com/AkaraChen/gnpm/internal/pmcombo"
+	"github.com/AkaraChen/gnpm/internal/runner"
 )
 
 var ciCmd = &cobra.Command{

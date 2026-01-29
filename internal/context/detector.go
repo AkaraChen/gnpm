@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/user/fnpm/internal/pmcombo"
+	"github.com/AkaraChen/gnpm/internal/pmcombo"
 )
 
 // ProjectContext holds information about the current project

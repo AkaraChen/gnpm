@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/user/fnpm/internal/logger"
+	"github.com/AkaraChen/gnpm/internal/logger"
 )
 
 // InitOptions for creating package.json

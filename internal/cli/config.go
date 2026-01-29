@@ -3,7 +3,7 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/user/fnpm/internal/native"
+	"github.com/AkaraChen/gnpm/internal/native"
 )
 
 var configGlobal bool
@@ -23,12 +23,12 @@ By default, operates on project-level .npmrc.
 Use -g flag for user-level ~/.npmrc.
 
 Examples:
-  fnpm config get registry
-  fnpm config set registry https://registry.npmmirror.com
-  fnpm config set @myorg:registry https://npm.myorg.com
-  fnpm config delete registry
-  fnpm config list
-  fnpm config set registry https://registry.npmjs.org -g`,
+  gnpm config get registry
+  gnpm config set registry https://registry.npmmirror.com
+  gnpm config set @myorg:registry https://npm.myorg.com
+  gnpm config delete registry
+  gnpm config list
+  gnpm config set registry https://registry.npmjs.org -g`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		workDir, err := getWorkingDir()

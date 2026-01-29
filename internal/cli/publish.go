@@ -3,7 +3,7 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/user/fnpm/internal/runner"
+	"github.com/AkaraChen/gnpm/internal/runner"
 )
 
 var publishTag string

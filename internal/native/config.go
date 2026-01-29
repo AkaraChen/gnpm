@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/user/fnpm/internal/logger"
+	"github.com/AkaraChen/gnpm/internal/logger"
 )
 
 // ConfigOptions for config operations

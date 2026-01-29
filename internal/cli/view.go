@@ -19,9 +19,9 @@ Without a package name, opens the current package.
 With -r flag, opens the repository instead of npm.
 
 Examples:
-  fnpm view lodash      # Open lodash on npm
-  fnpm view lodash -r   # Open lodash repository
-  fnpm view             # Open current package on npm`,
+  gnpm view lodash      # Open lodash on npm
+  gnpm view lodash -r   # Open lodash repository
+  gnpm view             # Open current package on npm`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var pkgName string
 

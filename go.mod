@@ -1,4 +1,4 @@
-module github.com/user/fnpm
+module github.com/AkaraChen/gnpm
 
 go 1.21
 

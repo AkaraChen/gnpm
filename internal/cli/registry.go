@@ -3,8 +3,8 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/user/fnpm/internal/logger"
-	"github.com/user/fnpm/internal/native"
+	"github.com/AkaraChen/gnpm/internal/logger"
+	"github.com/AkaraChen/gnpm/internal/native"
 )
 
 var registryGlobal bool
@@ -19,11 +19,11 @@ With a URL argument, sets the registry to that URL.
 You can also use preset names: npm, yarn, taobao, cnpm, tencent
 
 Examples:
-  fnpm registry                    # Show current registry
-  fnpm registry https://registry.npmmirror.com  # Set registry
-  fnpm registry taobao             # Use taobao preset
-  fnpm registry npm                # Reset to default npm registry
-  fnpm registry -g taobao          # Set global registry`,
+  gnpm registry                    # Show current registry
+  gnpm registry https://registry.npmmirror.com  # Set registry
+  gnpm registry taobao             # Use taobao preset
+  gnpm registry npm                # Reset to default npm registry
+  gnpm registry -g taobao          # Set global registry`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		workDir, err := getWorkingDir()
 		if err != nil {

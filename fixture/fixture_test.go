@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/user/fnpm/internal/context"
-	"github.com/user/fnpm/internal/workspace"
+	"github.com/AkaraChen/gnpm/internal/context"
+	"github.com/AkaraChen/gnpm/internal/workspace"
 )
 
 // fixtureDir returns the absolute path to a fixture directory
@@ -20,14 +20,14 @@ func fixtureDir(t *testing.T, name string) string {
 	return absPath
 }
 
-// buildFnpm compiles fnpm and returns the binary path
+// buildFnpm compiles gnpm and returns the binary path
 func buildFnpm(t *testing.T) string {
 	t.Helper()
 
-	binPath := filepath.Join(t.TempDir(), "fnpm")
-	cmd := exec.Command("go", "build", "-o", binPath, "../cmd/fnpm")
+	binPath := filepath.Join(t.TempDir(), "gnpm")
+	cmd := exec.Command("go", "build", "-o", binPath, "../cmd/gnpm")
 	if output, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("failed to build fnpm: %v\n%s", err, output)
+		t.Fatalf("failed to build gnpm: %v\n%s", err, output)
 	}
 	return binPath
 }
@@ -57,19 +57,19 @@ func TestE2E_PMDetection(t *testing.T) {
 		{"bun-single", "bun"},
 	}
 
-	fnpm := buildFnpm(t)
+	gnpm := buildFnpm(t)
 
 	for _, tc := range cases {
 		t.Run(tc.dir, func(t *testing.T) {
-			cmd := exec.Command(fnpm, "install", "--dry-run")
+			cmd := exec.Command(gnpm, "install", "--dry-run")
 			cmd.Dir = fixtureDir(t, tc.dir)
 
 			output, err := cmd.Output()
 			if err != nil {
 				if exitErr, ok := err.(*exec.ExitError); ok {
-					t.Fatalf("fnpm failed: %v\nstderr: %s", err, exitErr.Stderr)
+					t.Fatalf("gnpm failed: %v\nstderr: %s", err, exitErr.Stderr)
 				}
-				t.Fatalf("failed to run fnpm: %v", err)
+				t.Fatalf("failed to run gnpm: %v", err)
 			}
 
 			// dry-run outputs command to stdout
@@ -98,19 +98,19 @@ func TestE2E_Install(t *testing.T) {
 		{"bun-single", "bun install"},
 	}
 
-	fnpm := buildFnpm(t)
+	gnpm := buildFnpm(t)
 
 	for _, tc := range cases {
 		t.Run(tc.dir, func(t *testing.T) {
-			cmd := exec.Command(fnpm, "install", "--dry-run")
+			cmd := exec.Command(gnpm, "install", "--dry-run")
 			cmd.Dir = fixtureDir(t, tc.dir)
 
 			output, err := cmd.Output()
 			if err != nil {
 				if exitErr, ok := err.(*exec.ExitError); ok {
-					t.Fatalf("fnpm failed: %v\nstderr: %s", err, exitErr.Stderr)
+					t.Fatalf("gnpm failed: %v\nstderr: %s", err, exitErr.Stderr)
 				}
-				t.Fatalf("failed to run fnpm: %v", err)
+				t.Fatalf("failed to run gnpm: %v", err)
 			}
 
 			got := strings.TrimSpace(string(output))
@@ -151,21 +151,21 @@ func TestE2E_Add(t *testing.T) {
 		{"pnpm-single", []string{"lodash", "express"}, "pnpm add lodash express"},
 	}
 
-	fnpm := buildFnpm(t)
+	gnpm := buildFnpm(t)
 
 	for _, tc := range cases {
 		name := tc.dir + "_" + strings.Join(tc.args, "_")
 		t.Run(name, func(t *testing.T) {
 			args := append([]string{"add", "--dry-run"}, tc.args...)
-			cmd := exec.Command(fnpm, args...)
+			cmd := exec.Command(gnpm, args...)
 			cmd.Dir = fixtureDir(t, tc.dir)
 
 			output, err := cmd.Output()
 			if err != nil {
 				if exitErr, ok := err.(*exec.ExitError); ok {
-					t.Fatalf("fnpm failed: %v\nstderr: %s", err, exitErr.Stderr)
+					t.Fatalf("gnpm failed: %v\nstderr: %s", err, exitErr.Stderr)
 				}
-				t.Fatalf("failed to run fnpm: %v", err)
+				t.Fatalf("failed to run gnpm: %v", err)
 			}
 
 			got := strings.TrimSpace(string(output))
@@ -194,20 +194,20 @@ func TestE2E_Remove(t *testing.T) {
 		{"deno-single", []string{"lodash"}, "deno remove lodash"},
 	}
 
-	fnpm := buildFnpm(t)
+	gnpm := buildFnpm(t)
 
 	for _, tc := range cases {
 		t.Run(tc.dir, func(t *testing.T) {
 			args := append([]string{"remove", "--dry-run"}, tc.args...)
-			cmd := exec.Command(fnpm, args...)
+			cmd := exec.Command(gnpm, args...)
 			cmd.Dir = fixtureDir(t, tc.dir)
 
 			output, err := cmd.Output()
 			if err != nil {
 				if exitErr, ok := err.(*exec.ExitError); ok {
-					t.Fatalf("fnpm failed: %v\nstderr: %s", err, exitErr.Stderr)
+					t.Fatalf("gnpm failed: %v\nstderr: %s", err, exitErr.Stderr)
 				}
-				t.Fatalf("failed to run fnpm: %v", err)
+				t.Fatalf("failed to run gnpm: %v", err)
 			}
 
 			got := strings.TrimSpace(string(output))
@@ -222,7 +222,7 @@ func TestE2E_Remove(t *testing.T) {
 // E2E Tests: Run Command
 // =============================================================================
 
-// Note: fnpm run uses native script execution (directly runs the script content
+// Note: gnpm run uses native script execution (directly runs the script content
 // from package.json) rather than delegating to the package manager. The dry-run
 // output shows the script content, not "pm run <script>".
 func TestE2E_Run(t *testing.T) {
@@ -239,19 +239,19 @@ func TestE2E_Run(t *testing.T) {
 		{"deno-single", "build", "echo build"},
 	}
 
-	fnpm := buildFnpm(t)
+	gnpm := buildFnpm(t)
 
 	for _, tc := range cases {
 		t.Run(tc.dir, func(t *testing.T) {
-			cmd := exec.Command(fnpm, "run", "--dry-run", tc.script)
+			cmd := exec.Command(gnpm, "run", "--dry-run", tc.script)
 			cmd.Dir = fixtureDir(t, tc.dir)
 
 			output, err := cmd.Output()
 			if err != nil {
 				if exitErr, ok := err.(*exec.ExitError); ok {
-					t.Fatalf("fnpm failed: %v\nstderr: %s", err, exitErr.Stderr)
+					t.Fatalf("gnpm failed: %v\nstderr: %s", err, exitErr.Stderr)
 				}
-				t.Fatalf("failed to run fnpm: %v", err)
+				t.Fatalf("failed to run gnpm: %v", err)
 			}
 
 			got := strings.TrimSpace(string(output))

@@ -7,7 +7,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/user/fnpm/internal/context"
+	"github.com/AkaraChen/gnpm/internal/context"
 )
 
 // Package represents a workspace package

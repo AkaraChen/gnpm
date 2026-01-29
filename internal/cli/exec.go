@@ -3,7 +3,7 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/user/fnpm/internal/native"
+	"github.com/AkaraChen/gnpm/internal/native"
 )
 
 var execCmd = &cobra.Command{

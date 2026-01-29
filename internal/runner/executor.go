@@ -5,8 +5,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/user/fnpm/internal/logger"
-	"github.com/user/fnpm/internal/pmcombo"
+	"github.com/AkaraChen/gnpm/internal/logger"
+	"github.com/AkaraChen/gnpm/internal/pmcombo"
 )
 
 // Options for running commands

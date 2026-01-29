@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/user/fnpm/internal/pmcombo"
+	"github.com/AkaraChen/gnpm/internal/pmcombo"
 )
 
 var defaultCmd = &cobra.Command{
@@ -17,8 +17,8 @@ Without arguments, shows the current detected package manager.
 With a PM argument, sets it as default for the current project.
 
 Examples:
-  fnpm default        # Show current PM
-  fnpm default pnpm   # Set pnpm as default`,
+  gnpm default        # Show current PM
+  gnpm default pnpm   # Set pnpm as default`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			// Show current package manager
@@ -33,7 +33,7 @@ Examples:
 		}
 
 		fmt.Printf("Default package manager set to: %s\n", pm)
-		fmt.Println("Note: This only affects the current session. Use 'fnpm use' to change the packageManager field in package.json.")
+		fmt.Println("Note: This only affects the current session. Use 'gnpm use' to change the packageManager field in package.json.")
 		return nil
 	},
 }

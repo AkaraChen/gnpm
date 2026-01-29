@@ -6,10 +6,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/user/fnpm/internal/context"
-	"github.com/user/fnpm/internal/pmcombo"
-	"github.com/user/fnpm/internal/runner"
-	"github.com/user/fnpm/internal/workspace"
+	"github.com/AkaraChen/gnpm/internal/context"
+	"github.com/AkaraChen/gnpm/internal/pmcombo"
+	"github.com/AkaraChen/gnpm/internal/runner"
+	"github.com/AkaraChen/gnpm/internal/workspace"
 )
 
 var (
@@ -26,9 +26,9 @@ var (
 
 // rootCmd represents the base command
 var rootCmd = &cobra.Command{
-	Use:   "fnpm",
+	Use:   "gnpm",
 	Short: "A fast, unified package manager CLI",
-	Long: `fnpm is a fast, unified CLI that wraps npm, yarn, pnpm, deno, and bun.
+	Long: `gnpm is a fast, unified CLI that wraps npm, yarn, pnpm, deno, and bun.
 It detects your package manager from lock files and translates commands automatically.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Skip context detection for commands that don't need it
