@@ -1,0 +1,8 @@
+{
+  "name": "@pnpm-mono-5/pkg-001",
+  "scripts": {
+    "build": "echo build",
+    "test": "echo test"
+  },
+  "version": "1.0.0"
+}

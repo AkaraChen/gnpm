@@ -1,0 +1,8 @@
+{
+  "name": "@npm-mono-100/pkg-008",
+  "scripts": {
+    "build": "echo build",
+    "test": "echo test"
+  },
+  "version": "1.0.0"
+}

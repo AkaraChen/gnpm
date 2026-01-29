@@ -1,0 +1,8 @@
+{
+  "name": "@yarn-classic-mono-100/pkg-020",
+  "scripts": {
+    "build": "echo build",
+    "test": "echo test"
+  },
+  "version": "1.0.0"
+}

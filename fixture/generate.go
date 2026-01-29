@@ -1,0 +1,214 @@
+//go:build ignore
+
+// This script generates fixture directories for testing.
+// Run with: go run generate.go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
+type fixtureConfig struct {
+	dir          string
+	pm           string
+	lockFile     string
+	lockContent  string
+	configFile   string
+	configContent string
+	workspaces   int // 0 = single package, >0 = monorepo with N packages
+	usePnpmWorkspace bool
+}
+
+func main() {
+	fixtures := []fixtureConfig{
+		// npm
+		{dir: "npm-single", pm: "npm", lockFile: "package-lock.json", lockContent: npmLock()},
+		{dir: "npm-mono-5", pm: "npm", lockFile: "package-lock.json", lockContent: npmLock(), workspaces: 5},
+		{dir: "npm-mono-100", pm: "npm", lockFile: "package-lock.json", lockContent: npmLock(), workspaces: 100},
+
+		// Yarn Classic
+		{dir: "yarn-classic-single", pm: "yarn-classic", lockFile: "yarn.lock", lockContent: yarnClassicLock(), configFile: ".yarnrc", configContent: yarnClassicConfig()},
+		{dir: "yarn-classic-mono-5", pm: "yarn-classic", lockFile: "yarn.lock", lockContent: yarnClassicLock(), configFile: ".yarnrc", configContent: yarnClassicConfig(), workspaces: 5},
+		{dir: "yarn-classic-mono-100", pm: "yarn-classic", lockFile: "yarn.lock", lockContent: yarnClassicLock(), configFile: ".yarnrc", configContent: yarnClassicConfig(), workspaces: 100},
+
+		// Yarn Berry
+		{dir: "yarn-berry-single", pm: "yarn", lockFile: "yarn.lock", lockContent: yarnBerryLock(), configFile: ".yarnrc.yml", configContent: yarnBerryConfig()},
+		{dir: "yarn-berry-mono-5", pm: "yarn", lockFile: "yarn.lock", lockContent: yarnBerryLock(), configFile: ".yarnrc.yml", configContent: yarnBerryConfig(), workspaces: 5},
+		{dir: "yarn-berry-mono-100", pm: "yarn", lockFile: "yarn.lock", lockContent: yarnBerryLock(), configFile: ".yarnrc.yml", configContent: yarnBerryConfig(), workspaces: 100},
+
+		// pnpm
+		{dir: "pnpm-single", pm: "pnpm", lockFile: "pnpm-lock.yaml", lockContent: pnpmLock()},
+		{dir: "pnpm-mono-5", pm: "pnpm", lockFile: "pnpm-lock.yaml", lockContent: pnpmLock(), workspaces: 5, usePnpmWorkspace: true},
+		{dir: "pnpm-mono-100", pm: "pnpm", lockFile: "pnpm-lock.yaml", lockContent: pnpmLock(), workspaces: 100, usePnpmWorkspace: true},
+
+		// Deno
+		{dir: "deno-single", pm: "deno", lockFile: "deno.lock", lockContent: denoLock()},
+
+		// Bun
+		{dir: "bun-single", pm: "bun", lockFile: "bun.lockb", lockContent: bunLock()},
+	}
+
+	for _, f := range fixtures {
+		if err := createFixture(f); err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating %s: %v\n", f.dir, err)
+			os.Exit(1)
+		}
+		fmt.Printf("Created %s\n", f.dir)
+	}
+}
+
+func createFixture(f fixtureConfig) error {
+	// Create directory
+	if err := os.MkdirAll(f.dir, 0755); err != nil {
+		return err
+	}
+
+	// Create root package.json
+	var workspacePatterns []string
+	if f.workspaces > 0 {
+		workspacePatterns = []string{"packages/*"}
+	}
+
+	rootPkg := createPackageJSON(f.dir, "1.0.0", workspacePatterns)
+	if err := writeJSON(filepath.Join(f.dir, "package.json"), rootPkg); err != nil {
+		return err
+	}
+
+	// Create lock file
+	if err := os.WriteFile(filepath.Join(f.dir, f.lockFile), []byte(f.lockContent), 0644); err != nil {
+		return err
+	}
+
+	// Create config file if specified
+	if f.configFile != "" {
+		if err := os.WriteFile(filepath.Join(f.dir, f.configFile), []byte(f.configContent), 0644); err != nil {
+			return err
+		}
+	}
+
+	// Create pnpm-workspace.yaml for pnpm monorepos
+	if f.usePnpmWorkspace && f.workspaces > 0 {
+		content := "packages:\n  - 'packages/*'\n"
+		if err := os.WriteFile(filepath.Join(f.dir, "pnpm-workspace.yaml"), []byte(content), 0644); err != nil {
+			return err
+		}
+	}
+
+	// Create workspace packages
+	if f.workspaces > 0 {
+		packagesDir := filepath.Join(f.dir, "packages")
+		if err := os.MkdirAll(packagesDir, 0755); err != nil {
+			return err
+		}
+
+		for i := 1; i <= f.workspaces; i++ {
+			pkgName := fmt.Sprintf("pkg-%03d", i)
+			pkgDir := filepath.Join(packagesDir, pkgName)
+			if err := os.MkdirAll(pkgDir, 0755); err != nil {
+				return err
+			}
+
+			pkg := createPackageJSON(fmt.Sprintf("@%s/%s", f.dir, pkgName), "1.0.0", nil)
+			if err := writeJSON(filepath.Join(pkgDir, "package.json"), pkg); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func createPackageJSON(name, version string, workspaces []string) map[string]interface{} {
+	pkg := map[string]interface{}{
+		"name":    name,
+		"version": version,
+		"scripts": map[string]interface{}{
+			"build": "echo build",
+			"test":  "echo test",
+		},
+	}
+	if len(workspaces) > 0 {
+		pkg["workspaces"] = workspaces
+	}
+	return pkg
+}
+
+func writeJSON(path string, v interface{}) error {
+	data, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, append(data, '\n'), 0644)
+}
+
+// Lock file content generators
+
+func npmLock() string {
+	return `{
+  "name": "fixture",
+  "version": "1.0.0",
+  "lockfileVersion": 3,
+  "requires": true,
+  "packages": {}
+}
+`
+}
+
+func yarnClassicLock() string {
+	return `# THIS IS AN AUTOGENERATED FILE. DO NOT EDIT THIS FILE DIRECTLY.
+# yarn lockfile v1
+
+`
+}
+
+func yarnBerryLock() string {
+	return `# This file is generated by running "yarn install" inside your project.
+# Manual changes might be lost - proceed with caution!
+
+__metadata:
+  version: 8
+  cacheKey: 10c0
+
+`
+}
+
+func pnpmLock() string {
+	return `lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+`
+}
+
+func denoLock() string {
+	return `{
+  "version": "4",
+  "specifiers": {},
+  "npm": {},
+  "workspace": {
+    "dependencies": []
+  }
+}
+`
+}
+
+func bunLock() string {
+	// bun.lockb is a binary file, but we just need something recognizable
+	// The actual content doesn't matter for detection - just the filename
+	return "bun lockfile v0\x00"
+}
+
+func yarnClassicConfig() string {
+	return `# Yarn Classic configuration
+registry "https://registry.npmjs.org/"
+`
+}
+
+func yarnBerryConfig() string {
+	return `nodeLinker: node-modules
+`
+}
