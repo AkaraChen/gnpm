@@ -22,7 +22,7 @@ type ExecOptions struct {
 
 // Exec executes a binary from node_modules/.bin
 func Exec(opts ExecOptions) error {
-	binPath, err := findBinary(opts.Dir, opts.Command)
+	binPath, err := FindBinary(opts.Dir, opts.Command)
 	if err != nil {
 		return err
 	}
@@ -51,8 +51,8 @@ func Exec(opts ExecOptions) error {
 	return cmd.Run()
 }
 
-// findBinary searches for a binary in node_modules/.bin, walking up the directory tree
-func findBinary(dir string, name string) (string, error) {
+// FindBinary searches for a binary in node_modules/.bin, walking up the directory tree
+func FindBinary(dir string, name string) (string, error) {
 	var candidates []string
 	if runtime.GOOS == "windows" {
 		candidates = []string{name + ".cmd", name + ".ps1", name + ".exe", name}

@@ -8,8 +8,9 @@ import (
 )
 
 var scaffoldCmd = &cobra.Command{
-	Use:   "scaffold [args...]",
-	Short: "Scaffold a project using create-akrc",
+	Use:     "scaffold [args...]",
+	Aliases: []string{"sc"},
+	Short:   "Scaffold a project using create-akrc",
 	Long:  `Scaffold a new project using the create-akrc template.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		workDir, err := getWorkingDir()

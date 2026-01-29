@@ -19,13 +19,23 @@ make install                 # Install to $GOPATH/bin
 
 gnpm is a unified CLI that wraps npm, yarn, pnpm, deno, and bun. It detects the package manager from lock files and translates commands.
 
-### Two Execution Paths
+### Three Execution Paths
 
-Commands fall into two categories:
+Commands fall into three categories:
 
-1. **PM Delegation** (`pmcombo` → `runner.Run`): Translates gnpm commands to PM-specific commands and executes via the detected package manager. Used by: add, remove, install, ci, update, dlx, create, scaffold, publish, why.
+1. **PM Delegation** (`pmcombo` → `runner.Run`): Translates gnpm commands to PM-specific commands and executes via the detected package manager. Used by: install (with packages), remove, ci, update, create (with template), scaffold, publish, why.
 
-2. **Native Go** (`native.*`): Implements functionality directly in Go without calling a PM. Used by: run, test, exec, init, config, registry.
+2. **Native Go** (`native.*`): Implements functionality directly in Go without calling a PM. Used by: run, test, exec (local binaries), create (without args), config, registry.
+
+3. **Fallback** (`native.Fallback`): For unknown commands, tries: package.json scripts → node_modules/.bin → system commands.
+
+### Merged Commands
+
+Several commands are merged with smart behavior:
+
+- **install** (aliases: `i`, `a`, `add`): Without args installs all deps, with args adds packages
+- **exec** (aliases: `x`, `npx`, `dlx`): Tries local binary first, falls back to dlx
+- **create** (aliases: `c`, `init`): Without args creates package.json, with args scaffolds from template
 
 ### Core Packages
 
@@ -37,12 +47,13 @@ Commands fall into two categories:
 - `registry.go` - Manages npm registry configuration
 - `exec.go` - Runs binaries from node_modules/.bin
 - `init.go` - Creates package.json
+- `fallback.go` - Handles unknown commands (scripts → binaries → system)
 
 **internal/context** - Project detection. `detector.go` finds PM from lock files with priority order: bun.lockb → deno.lock → pnpm-lock.yaml → yarn.lock → package-lock.json. Yarn Classic vs Berry distinguished by .yarnrc.yml presence or `__metadata:` in yarn.lock.
 
 **internal/workspace** - Monorepo support. `finder.go` globs workspace patterns from package.json `workspaces` field or pnpm-workspace.yaml. `fuzzy.go` provides interactive package selection for `-s` flag.
 
-**internal/cli** - Cobra commands. `root.go` sets up persistent flags (-w, -s, -v, --pm, --dry-run) and runs `context.Detect()` in PersistentPreRunE.
+**internal/cli** - Cobra commands. `root.go` sets up persistent flags (-w, -s, -V, --pm, --dry-run), runs `context.Detect()` in PersistentPreRunE, and handles fallback for unknown commands.
 
 **internal/runner** - Executes PM commands via os/exec, handles --dry-run output.
 
@@ -51,12 +62,19 @@ Commands fall into two categories:
 ```
 gnpm <cmd> [args]
     │
-    ├─► PM delegation path
-    │   CLI → pmcombo.Concat(pm) → runner.Run(pm, args)
-    │                                    └─► npm/yarn/pnpm/bun/deno <args>
+    ├─► Known command
+    │   ├─► PM delegation path
+    │   │   CLI → pmcombo.Concat(pm) → runner.Run(pm, args)
+    │   │                                    └─► npm/yarn/pnpm/bun/deno <args>
+    │   │
+    │   └─► Native path
+    │       CLI → native.* → direct Go implementation
     │
-    └─► Native path
-        CLI → native.* → direct Go implementation
+    └─► Unknown command (fallback)
+        CLI → native.Fallback
+            ├─► 1. Check package.json scripts
+            ├─► 2. Check node_modules/.bin
+            └─► 3. Run as system command
 ```
 
 ### Fixture Testing

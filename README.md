@@ -19,11 +19,16 @@ go install github.com/AkaraChen/gnpm/cmd/gnpm@latest
 ```bash
 # Works in any project - gnpm detects the package manager
 gnpm install          # npm install / yarn install / pnpm install / bun install
-gnpm add lodash       # npm install lodash / yarn add lodash / pnpm add lodash
+gnpm i react          # Add react (i is alias for install)
 gnpm add -D typescript
 gnpm remove lodash
 gnpm run build
 gnpm test
+
+# Unknown commands are resolved automatically
+gnpm build            # Runs "build" script from package.json
+gnpm eslint .         # Runs eslint from node_modules/.bin
+gnpm ls               # Falls back to system command
 ```
 
 ## Detection
@@ -43,43 +48,82 @@ gnpm detects your package manager from lock files:
 
 ### Package Management
 
-| Command | Description |
-|---------|-------------|
-| `gnpm install` | Install all dependencies |
-| `gnpm add <pkg>` | Add a package |
-| `gnpm add -D <pkg>` | Add a dev dependency |
-| `gnpm remove <pkg>` | Remove a package |
-| `gnpm update` | Update packages |
-| `gnpm ci` | Clean install (frozen lockfile) |
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `gnpm install` | `i` | Install all dependencies |
+| `gnpm install <pkg>` | `i`, `a`, `add` | Add a package |
+| `gnpm install -D <pkg>` | | Add a dev dependency |
+| `gnpm remove <pkg>` | `rm`, `un`, `uninstall` | Remove a package |
+| `gnpm update` | `up`, `upgrade` | Update packages |
+| `gnpm ci` | | Clean install (frozen lockfile) |
 
-### Scripts
+### Scripts & Execution
 
-| Command | Description |
-|---------|-------------|
-| `gnpm run <script>` | Run a script from package.json |
-| `gnpm test` | Run test script |
-| `gnpm exec <cmd>` | Execute a binary from node_modules/.bin |
-| `gnpm dlx <pkg>` | Download and execute a package |
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `gnpm run <script>` | `r` | Run a script from package.json |
+| `gnpm test` | `t` | Run test script |
+| `gnpm exec <cmd>` | `x`, `npx`, `dlx` | Execute binary (local or download) |
+
+The `exec` command first looks for binaries in `node_modules/.bin`, then falls back to downloading and executing (like npx/dlx).
 
 ### Configuration
 
-| Command | Description |
-|---------|-------------|
-| `gnpm config list` | List all config |
-| `gnpm config get <key>` | Get a config value |
-| `gnpm config set <key> <value>` | Set a config value |
-| `gnpm registry [url]` | Get or set registry |
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `gnpm config list` | | List all config |
+| `gnpm config get <key>` | | Get a config value |
+| `gnpm config set <key> <value>` | | Set a config value |
+| `gnpm registry [url]` | `reg` | Get or set registry |
+
+### Project Setup
+
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `gnpm create` | `c`, `init` | Initialize package.json |
+| `gnpm create <template>` | `c`, `init` | Create project from template |
+| `gnpm scaffold` | `sc` | Scaffold using create-akrc |
+
+The `create` command without arguments creates a package.json (like `npm init`). With a template name, it scaffolds a new project.
 
 ### Other
 
-| Command | Description |
-|---------|-------------|
-| `gnpm init` | Initialize package.json |
-| `gnpm create <template>` | Create project from template |
-| `gnpm publish` | Publish to npm |
-| `gnpm why <pkg>` | Show why a package is installed |
-| `gnpm view <pkg>` | Open package on npm |
-| `gnpm use <pm>@<version>` | Switch PM version via corepack |
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `gnpm publish` | `pub` | Publish to npm |
+| `gnpm why <pkg>` | | Show why a package is installed |
+| `gnpm view <pkg>` | `v`, `info`, `show` | Open package on npm |
+| `gnpm use <pm>@<version>` | | Switch PM version via corepack |
+
+## Aliases Quick Reference
+
+| Full Command | Short Aliases |
+|--------------|---------------|
+| `install` | `i`, `a`, `add` |
+| `remove` | `rm`, `un`, `uninstall` |
+| `update` | `up`, `upgrade` |
+| `run` | `r` |
+| `test` | `t` |
+| `exec` | `x`, `npx`, `dlx` |
+| `create` | `c`, `init` |
+| `registry` | `reg` |
+| `publish` | `pub` |
+| `view` | `v`, `info`, `show` |
+| `scaffold` | `sc` |
+
+## Default Command Fallback
+
+When you run an unknown command, gnpm tries to resolve it:
+
+1. **Scripts** - Check if it's a script in package.json
+2. **Binaries** - Check if it's in node_modules/.bin
+3. **System** - Run as a system command
+
+```bash
+gnpm build      # → runs "build" script if defined
+gnpm eslint .   # → runs ./node_modules/.bin/eslint if installed
+gnpm ls         # → runs system ls command
+```
 
 ## Flags
 
@@ -89,7 +133,7 @@ gnpm detects your package manager from lock files:
 | `-s, --select` | Fuzzy select a workspace package |
 | `--pm <pm>` | Override detected package manager |
 | `--dry-run` | Print command without executing |
-| `-v, --verbose` | Verbose output |
+| `-V, --verbose` | Verbose output |
 
 ## Monorepo Support
 
@@ -106,4 +150,3 @@ gnpm run build -s
 ## License
 
 MIT
-

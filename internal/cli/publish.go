@@ -11,8 +11,9 @@ var publishAccess string
 var publishDryRun bool
 
 var publishCmd = &cobra.Command{
-	Use:   "publish",
-	Short: "Publish the package to npm registry",
+	Use:     "publish",
+	Aliases: []string{"pub"},
+	Short:   "Publish the package to npm registry",
 	Long:  `Publish the current package to the npm registry.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		workDir, err := getWorkingDir()

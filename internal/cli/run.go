@@ -7,8 +7,9 @@ import (
 )
 
 var runCmd = &cobra.Command{
-	Use:   "run <script> [args...]",
-	Short: "Run a script from package.json",
+	Use:     "run <script> [args...]",
+	Aliases: []string{"r"},
+	Short:   "Run a script from package.json",
 	Long:  `Run a script defined in package.json.`,
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {

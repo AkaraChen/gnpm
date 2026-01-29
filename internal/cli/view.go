@@ -11,8 +11,9 @@ import (
 var viewRepo bool
 
 var viewCmd = &cobra.Command{
-	Use:   "view [package]",
-	Short: "Open package on npm or repository",
+	Use:     "view [package]",
+	Aliases: []string{"v", "info", "show"},
+	Short:   "Open package on npm or repository",
 	Long: `Open package page on npm registry or its repository.
 
 Without a package name, opens the current package.

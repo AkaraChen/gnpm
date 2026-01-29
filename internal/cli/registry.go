@@ -10,8 +10,9 @@ import (
 var registryGlobal bool
 
 var registryCmd = &cobra.Command{
-	Use:   "registry [url|preset]",
-	Short: "Get or set the npm registry URL",
+	Use:     "registry [url|preset]",
+	Aliases: []string{"reg"},
+	Short:   "Get or set the npm registry URL",
 	Long: `Get or set the npm registry URL.
 
 Without arguments, shows the current registry.

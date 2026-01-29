@@ -7,8 +7,9 @@ import (
 )
 
 var testCmd = &cobra.Command{
-	Use:   "test [args...]",
-	Short: "Run tests",
+	Use:     "test [args...]",
+	Aliases: []string{"t"},
+	Short:   "Run tests",
 	Long:  `Run the test script from package.json.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		workDir, err := getWorkingDir()
