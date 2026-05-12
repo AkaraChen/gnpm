@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	projectcontext "github.com/AkaraChen/gnpm/internal/context"
@@ -21,7 +20,7 @@ import (
 const (
 	pnpmWorkspaceFile        = "pnpm-workspace.yaml"
 	pnpmMinimumReleaseAgeMin = 1440
-	pnpmVersionProbeTimeout  = 3 * time.Second
+	versionProbeTimeout      = 3 * time.Second
 
 	// pnpmMinimumSafeVersion is the version floor for the pnpm security
 	// settings gnpm writes below. pnpm introduced the relevant settings across
@@ -33,11 +32,6 @@ const (
 	pnpmMinimumSafeVersion = "11.0.0"
 )
 
-var (
-	checksMu sync.Mutex
-	checks   []<-chan struct{}
-)
-
 // Options controls package-manager security checks.
 type Options struct {
 	DryRun  bool
@@ -46,9 +40,10 @@ type Options struct {
 
 // Result describes changes made by a security check.
 type Result struct {
-	Changed  bool
-	Settings []string
-	Warnings []string
+	Changed     bool
+	Settings    []string
+	Warnings    []string
+	Unsupported []string
 }
 
 type pnpmVersionResult struct {
@@ -58,35 +53,84 @@ type pnpmVersionResult struct {
 
 var detectPNPMVersion = detectPNPMVersionFromSystem
 
-// WarnPackageManagerVersionIfUnsafe warns when the active package manager is too old.
-func WarnPackageManagerVersionIfUnsafe(ctx *projectcontext.ProjectContext, opts Options) {
-	if ctx == nil || ctx.PackageManager != pmcombo.PNPM {
+// RunPackageManagerSecurityCheck verifies the active package manager version and
+// applies supported security settings before lifecycle-capable PM commands run.
+func RunPackageManagerSecurityCheck(ctx *projectcontext.ProjectContext, opts Options) {
+	if ctx == nil {
 		return
 	}
 
-	warning, err := checkPNPMMinimumSafeVersion(ctx.RootDir)
+	var warning string
+	var err error
+	var result Result
+	var label string
+	var ensure func(string, string, Options) (Result, error)
+	var version string
+
+	switch ctx.PackageManager {
+	case pmcombo.PNPM:
+		version, warning, err = checkPNPMMinimumSafeVersion(ctx.RootDir)
+		ensure = EnsurePNPMBestPractices
+		label = "pnpm"
+	case pmcombo.Yarn, pmcombo.YarnClassic:
+		version, warning, err = checkYarnMinimumSafeVersion(ctx.RootDir)
+		if ctx.PackageManager == pmcombo.Yarn {
+			ensure = EnsureYarnBestPractices
+		}
+		label = "yarn"
+	case pmcombo.Bun:
+		version, warning, err = checkBunMinimumSafeVersion(ctx.RootDir)
+		ensure = EnsureBunBestPractices
+		label = "bun"
+	default:
+		return
+	}
+
 	if err != nil {
 		if opts.Verbose {
-			logger.Warn("pnpm version check failed: %v", err)
+			logger.Warn("%s version check failed: %v", ctx.PackageManager.Executable(), err)
 		}
 		return
 	}
 	if warning != "" {
 		logger.Warn("%s", warning)
 	}
+
+	if ensure == nil {
+		return
+	}
+
+	result, err = ensure(ctx.RootDir, version, opts)
+	if err != nil {
+		logger.Warn("%s security config check failed: %v", label, err)
+		return
+	}
+
+	for _, warning := range result.Warnings {
+		logger.Warn("%s", warning)
+	}
+	for _, setting := range result.Unsupported {
+		if opts.Verbose {
+			logger.Warn("%s security setting %s requires a newer %s version", label, setting, label)
+		}
+	}
+
+	if result.Changed && opts.Verbose {
+		logger.Success("%s security config updated: %s", label, strings.Join(result.Settings, ", "))
+	}
 }
 
-func checkPNPMMinimumSafeVersion(rootDir string) (string, error) {
+func checkPNPMMinimumSafeVersion(rootDir string) (string, string, error) {
 	detected, err := detectPNPMVersion(rootDir)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if compareSemver(detected.Version, pnpmMinimumSafeVersion) >= 0 {
-		return "", nil
+		return detected.Version, "", nil
 	}
 
-	return fmt.Sprintf(
+	return detected.Version, fmt.Sprintf(
 		"pnpm %s from %s is below gnpm's minimum safe pnpm version %s; upgrade pnpm to %s or newer to enable all recommended security settings",
 		detected.Version,
 		detected.Source,
@@ -106,7 +150,7 @@ func detectPNPMVersionFromSystem(rootDir string) (pnpmVersionResult, error) {
 		{source: "corepack", name: "corepack", args: []string{"pnpm", "-v"}},
 		{source: "pnpm", name: "pnpm", args: []string{"-v"}},
 	} {
-		output, err := runPNPMVersionProbe(rootDir, probe.name, probe.args...)
+		output, err := runPackageManagerVersionProbe(rootDir, probe.name, probe.args...)
 		if err != nil {
 			errors = append(errors, err.Error())
 			continue
@@ -124,12 +168,12 @@ func detectPNPMVersionFromSystem(rootDir string) (pnpmVersionResult, error) {
 	return pnpmVersionResult{}, fmt.Errorf("detect pnpm version: %s", strings.Join(errors, "; "))
 }
 
-func runPNPMVersionProbe(rootDir string, name string, args ...string) (string, error) {
+func runPackageManagerVersionProbe(rootDir string, name string, args ...string) (string, error) {
 	if _, err := exec.LookPath(name); err != nil {
 		return "", err
 	}
 
-	ctx, cancel := stdcontext.WithTimeout(stdcontext.Background(), pnpmVersionProbeTimeout)
+	ctx, cancel := stdcontext.WithTimeout(stdcontext.Background(), versionProbeTimeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, name, args...)
@@ -151,51 +195,8 @@ func runPNPMVersionProbe(rootDir string, name string, args ...string) (string, e
 	return string(output), nil
 }
 
-// StartPackageManagerBestPracticeCheck runs a best-practice check in the background.
-func StartPackageManagerBestPracticeCheck(ctx *projectcontext.ProjectContext, opts Options) {
-	done := make(chan struct{})
-
-	checksMu.Lock()
-	checks = append(checks, done)
-	checksMu.Unlock()
-
-	go func() {
-		defer close(done)
-
-		if ctx == nil || ctx.PackageManager != pmcombo.PNPM {
-			return
-		}
-
-		result, err := EnsurePNPMBestPractices(ctx.RootDir, opts)
-		if err != nil {
-			logger.Warn("pnpm security config check failed: %v", err)
-			return
-		}
-
-		for _, warning := range result.Warnings {
-			logger.Warn("%s", warning)
-		}
-
-		if result.Changed && opts.Verbose {
-			logger.Success("pnpm security config updated: %s", strings.Join(result.Settings, ", "))
-		}
-	}()
-}
-
-// WaitForPackageManagerBestPracticeChecks waits for all started checks to finish.
-func WaitForPackageManagerBestPracticeChecks() {
-	checksMu.Lock()
-	pending := checks
-	checks = nil
-	checksMu.Unlock()
-
-	for _, done := range pending {
-		<-done
-	}
-}
-
 // EnsurePNPMBestPractices enforces pnpm supply-chain security settings.
-func EnsurePNPMBestPractices(rootDir string, opts Options) (Result, error) {
+func EnsurePNPMBestPractices(rootDir string, version string, opts Options) (Result, error) {
 	var result Result
 	if rootDir == "" {
 		return result, fmt.Errorf("empty project root")
@@ -208,25 +209,39 @@ func EnsurePNPMBestPractices(rootDir string, opts Options) (Result, error) {
 	}
 
 	root := ensureMappingDocument(doc)
-	if ensureBool(root, "dangerouslyAllowAllBuilds", false) {
+	if !supportsPMSetting(version, "10.9.0") {
+		result.Unsupported = append(result.Unsupported, "dangerouslyAllowAllBuilds")
+	} else if ensureBool(root, "dangerouslyAllowAllBuilds", false) {
 		result.Settings = append(result.Settings, "dangerouslyAllowAllBuilds=false")
 	}
-	if ensureBool(root, "strictDepBuilds", true) {
+	if !supportsPMSetting(version, "10.3.0") {
+		result.Unsupported = append(result.Unsupported, "strictDepBuilds")
+	} else if ensureBool(root, "strictDepBuilds", true) {
 		result.Settings = append(result.Settings, "strictDepBuilds=true")
 	}
-	if ensureMap(root, "allowBuilds") {
+	if !supportsPMSetting(version, "10.26.0") {
+		result.Unsupported = append(result.Unsupported, "allowBuilds")
+	} else if ensureMap(root, "allowBuilds") {
 		result.Settings = append(result.Settings, "allowBuilds={}")
 	}
-	if ensureBool(root, "blockExoticSubdeps", true) {
+	if !supportsPMSetting(version, "10.26.0") {
+		result.Unsupported = append(result.Unsupported, "blockExoticSubdeps")
+	} else if ensureBool(root, "blockExoticSubdeps", true) {
 		result.Settings = append(result.Settings, "blockExoticSubdeps=true")
 	}
-	if ensureMinInt(root, "minimumReleaseAge", pnpmMinimumReleaseAgeMin) {
+	if !supportsPMSetting(version, "10.16.0") {
+		result.Unsupported = append(result.Unsupported, "minimumReleaseAge")
+	} else if ensureMinInt(root, "minimumReleaseAge", pnpmMinimumReleaseAgeMin) {
 		result.Settings = append(result.Settings, "minimumReleaseAge=1440")
 	}
-	if ensureBool(root, "minimumReleaseAgeStrict", true) {
+	if !supportsPMSetting(version, "11.0.0") {
+		result.Unsupported = append(result.Unsupported, "minimumReleaseAgeStrict")
+	} else if ensureBool(root, "minimumReleaseAgeStrict", true) {
 		result.Settings = append(result.Settings, "minimumReleaseAgeStrict=true")
 	}
-	if ensureString(root, "trustPolicy", "no-downgrade") {
+	if !supportsPMSetting(version, "10.21.0") {
+		result.Unsupported = append(result.Unsupported, "trustPolicy")
+	} else if ensureString(root, "trustPolicy", "no-downgrade") {
 		result.Settings = append(result.Settings, "trustPolicy=no-downgrade")
 	}
 
@@ -480,6 +495,10 @@ func compareSemver(a string, b string) int {
 		return -1
 	}
 	return strings.Compare(aVersion.Prerelease, bVersion.Prerelease)
+}
+
+func supportsPMSetting(version string, minVersion string) bool {
+	return compareSemver(version, minVersion) >= 0
 }
 
 func compareInt(a int, b int) int {

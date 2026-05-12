@@ -3,6 +3,7 @@ module github.com/AkaraChen/gnpm
 go 1.21
 
 require (
+	github.com/BurntSushi/toml v1.6.0
 	github.com/fatih/color v1.16.0
 	github.com/ktr0731/go-fuzzyfinder v0.8.0
 	github.com/spf13/cobra v1.8.0

@@ -21,6 +21,8 @@ var removeCmd = &cobra.Command{
 			return err
 		}
 
+		runPackageManagerSecurityCheck()
+
 		removeCmd := pmcombo.NewRemoveCommand(pmcombo.RemoveOptions{
 			Packages: args,
 			Global:   removeGlobal,

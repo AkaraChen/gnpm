@@ -16,7 +16,7 @@ func TestEnsurePNPMBestPracticesCreatesMissingSettings(t *testing.T) {
 	rootDir := t.TempDir()
 	writeFile(t, rootDir, "pnpm-lock.yaml", "lockfileVersion: '9.0'\n")
 
-	result, err := EnsurePNPMBestPractices(rootDir, Options{})
+	result, err := EnsurePNPMBestPractices(rootDir, pnpmMinimumSafeVersion, Options{})
 	if err != nil {
 		t.Fatalf("EnsurePNPMBestPractices failed: %v", err)
 	}
@@ -51,7 +51,7 @@ minimumReleaseAgeStrict: false
 trustPolicy: off
 `)
 
-	result, err := EnsurePNPMBestPractices(rootDir, Options{})
+	result, err := EnsurePNPMBestPractices(rootDir, pnpmMinimumSafeVersion, Options{})
 	if err != nil {
 		t.Fatalf("EnsurePNPMBestPractices failed: %v", err)
 	}
@@ -98,7 +98,7 @@ minimumReleaseAgeStrict: true
 trustPolicy: no-downgrade
 `)
 
-	result, err := EnsurePNPMBestPractices(rootDir, Options{})
+	result, err := EnsurePNPMBestPractices(rootDir, pnpmMinimumSafeVersion, Options{})
 	if err != nil {
 		t.Fatalf("EnsurePNPMBestPractices failed: %v", err)
 	}
@@ -115,7 +115,7 @@ func TestEnsurePNPMBestPracticesDryRunDoesNotWrite(t *testing.T) {
 	writeFile(t, rootDir, "pnpm-lock.yaml", "lockfileVersion: '9.0'\n")
 	writeFile(t, rootDir, pnpmWorkspaceFile, "dangerouslyAllowAllBuilds: true\n")
 
-	result, err := EnsurePNPMBestPractices(rootDir, Options{DryRun: true})
+	result, err := EnsurePNPMBestPractices(rootDir, pnpmMinimumSafeVersion, Options{DryRun: true})
 	if err != nil {
 		t.Fatalf("EnsurePNPMBestPractices failed: %v", err)
 	}
@@ -145,9 +145,12 @@ func TestCheckPNPMMinimumSafeVersionWarnsBelowMinimum(t *testing.T) {
 	}, nil)
 	defer restore()
 
-	warning, err := checkPNPMMinimumSafeVersion(t.TempDir())
+	version, warning, err := checkPNPMMinimumSafeVersion(t.TempDir())
 	if err != nil {
 		t.Fatalf("checkPNPMMinimumSafeVersion failed: %v", err)
+	}
+	if version != "10.26.0" {
+		t.Fatalf("expected detected version %q, got %q", "10.26.0", version)
 	}
 	if !strings.Contains(warning, "pnpm 10.26.0 from corepack") {
 		t.Fatalf("expected detected version in warning, got %q", warning)
@@ -166,9 +169,12 @@ func TestCheckPNPMMinimumSafeVersionAllowsMinimumOrNewer(t *testing.T) {
 			}, nil)
 			defer restore()
 
-			warning, err := checkPNPMMinimumSafeVersion(t.TempDir())
+			detected, warning, err := checkPNPMMinimumSafeVersion(t.TempDir())
 			if err != nil {
 				t.Fatalf("checkPNPMMinimumSafeVersion failed: %v", err)
+			}
+			if detected != version {
+				t.Fatalf("expected detected version %q, got %q", version, detected)
 			}
 			if warning != "" {
 				t.Fatalf("expected no warning, got %q", warning)
@@ -186,19 +192,73 @@ func TestCompareSemverTreatsPrereleaseAsBelowRelease(t *testing.T) {
 	}
 }
 
-func TestStartPackageManagerBestPracticeCheckRunsInBackground(t *testing.T) {
+func TestRunPackageManagerSecurityCheckRunsForPNPM(t *testing.T) {
 	rootDir := t.TempDir()
 	writeFile(t, rootDir, "pnpm-lock.yaml", "lockfileVersion: '9.0'\n")
 
-	StartPackageManagerBestPracticeCheck(&projectcontext.ProjectContext{
+	restore := stubPNPMVersionDetector(pnpmVersionResult{
+		Version: "11.0.0",
+		Source:  "corepack",
+	}, nil)
+	defer restore()
+
+	RunPackageManagerSecurityCheck(&projectcontext.ProjectContext{
 		RootDir:        rootDir,
 		PackageManager: pmcombo.PNPM,
 	}, Options{})
-	WaitForPackageManagerBestPracticeChecks()
 
 	config := readWorkspaceConfig(t, rootDir)
 	assertEqual(t, config["trustPolicy"], "no-downgrade")
 	assertEqual(t, config["blockExoticSubdeps"], true)
+}
+
+func TestRunPackageManagerSecurityCheckWritesSupportedPNPMSettingsBelowMinimum(t *testing.T) {
+	rootDir := t.TempDir()
+	writeFile(t, rootDir, "pnpm-lock.yaml", "lockfileVersion: '9.0'\n")
+
+	restore := stubPNPMVersionDetector(pnpmVersionResult{
+		Version: "10.26.0",
+		Source:  "corepack",
+	}, nil)
+	defer restore()
+
+	RunPackageManagerSecurityCheck(&projectcontext.ProjectContext{
+		RootDir:        rootDir,
+		PackageManager: pmcombo.PNPM,
+	}, Options{})
+
+	config := readWorkspaceConfig(t, rootDir)
+	assertEqual(t, config["dangerouslyAllowAllBuilds"], false)
+	assertEqual(t, config["strictDepBuilds"], true)
+	assertEqual(t, config["blockExoticSubdeps"], true)
+	assertEqual(t, config["minimumReleaseAge"], 1440)
+	assertEqual(t, config["trustPolicy"], "no-downgrade")
+	if _, ok := config["minimumReleaseAgeStrict"]; ok {
+		t.Fatal("did not expect unsupported minimumReleaseAgeStrict to be written")
+	}
+}
+
+func TestEnsurePNPMBestPracticesWritesOnlyVersionSupportedSettings(t *testing.T) {
+	rootDir := t.TempDir()
+	writeFile(t, rootDir, "pnpm-lock.yaml", "lockfileVersion: '9.0'\n")
+
+	result, err := EnsurePNPMBestPractices(rootDir, "10.16.0", Options{})
+	if err != nil {
+		t.Fatalf("EnsurePNPMBestPractices failed: %v", err)
+	}
+
+	config := readWorkspaceConfig(t, rootDir)
+	assertEqual(t, config["dangerouslyAllowAllBuilds"], false)
+	assertEqual(t, config["strictDepBuilds"], true)
+	assertEqual(t, config["minimumReleaseAge"], 1440)
+	for _, key := range []string{"allowBuilds", "blockExoticSubdeps", "minimumReleaseAgeStrict", "trustPolicy"} {
+		if _, ok := config[key]; ok {
+			t.Fatalf("did not expect unsupported %s to be written", key)
+		}
+	}
+	if !slices.Contains(result.Unsupported, "allowBuilds") {
+		t.Fatalf("expected allowBuilds to be unsupported, got %#v", result.Unsupported)
+	}
 }
 
 func stubPNPMVersionDetector(result pnpmVersionResult, err error) func() {

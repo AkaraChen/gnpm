@@ -21,6 +21,8 @@ var updateCmd = &cobra.Command{
 			return err
 		}
 
+		runPackageManagerSecurityCheck()
+
 		updateCommand := pmcombo.NewUpdateCommand(pmcombo.UpdateOptions{
 			Packages:    args,
 			Interactive: updateInteractive,

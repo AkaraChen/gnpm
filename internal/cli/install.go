@@ -48,6 +48,8 @@ func runInstall(args []string) error {
 		return err
 	}
 
+	runPackageManagerSecurityCheck()
+
 	// If no packages specified, install all dependencies
 	if len(args) == 0 {
 		installCmd := pmcombo.NewInstallCommand(pmcombo.InstallOptions{

@@ -11,7 +11,6 @@ import (
 	"github.com/AkaraChen/gnpm/internal/native"
 	"github.com/AkaraChen/gnpm/internal/pmcombo"
 	"github.com/AkaraChen/gnpm/internal/runner"
-	"github.com/AkaraChen/gnpm/internal/security"
 	"github.com/AkaraChen/gnpm/internal/workspace"
 )
 
@@ -80,13 +79,6 @@ Unknown commands are automatically resolved:
 			ctx.PackageManager = pm
 		}
 
-		securityOpts := security.Options{
-			DryRun:  dryRun,
-			Verbose: verbose,
-		}
-		security.WarnPackageManagerVersionIfUnsafe(ctx, securityOpts)
-		security.StartPackageManagerBestPracticeCheck(ctx, securityOpts)
-
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -96,8 +88,6 @@ Unknown commands are automatically resolved:
 
 // Execute runs the root command
 func Execute() error {
-	defer security.WaitForPackageManagerBestPracticeChecks()
-
 	// Check if the first argument is an unknown command (not a flag)
 	if len(os.Args) > 1 && !isFlag(os.Args[1]) {
 		cmd, _, err := rootCmd.Find(os.Args[1:])

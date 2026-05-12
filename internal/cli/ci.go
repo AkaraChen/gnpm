@@ -17,6 +17,8 @@ var ciCmd = &cobra.Command{
 			return err
 		}
 
+		runPackageManagerSecurityCheck()
+
 		installCmd := pmcombo.NewInstallCommand(pmcombo.InstallOptions{
 			Frozen: true,
 		})
