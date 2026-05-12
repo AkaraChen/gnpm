@@ -30,41 +30,7 @@ Examples:
   gnpm add react         # Same as install react
   gnpm a react           # Same as above`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		workDir, err := getWorkingDir()
-		if err != nil {
-			return err
-		}
-
-		// If no packages specified, install all dependencies
-		if len(args) == 0 {
-			installCmd := pmcombo.NewInstallCommand(pmcombo.InstallOptions{
-				Frozen: false,
-			})
-
-			cmdArgs, err := installCmd.Concat(ctx.PackageManager)
-			if err != nil {
-				return err
-			}
-
-			return runner.Run(ctx.PackageManager, cmdArgs, workDir, runnerOpts())
-		}
-
-		// Otherwise, add the specified packages
-		addCmd := pmcombo.NewAddCommand(pmcombo.AddOptions{
-			Packages: args,
-			Dev:      installDev,
-			Exact:    installExact,
-			Global:   installGlobal,
-			Peer:     installPeer,
-			Optional: installOptional,
-		})
-
-		cmdArgs, err := addCmd.Concat(ctx.PackageManager)
-		if err != nil {
-			return err
-		}
-
-		return runner.Run(ctx.PackageManager, cmdArgs, workDir, runnerOpts())
+		return runInstall(args)
 	},
 }
 
@@ -74,4 +40,42 @@ func init() {
 	installCmd.Flags().BoolVarP(&installGlobal, "global", "g", false, "Add globally")
 	installCmd.Flags().BoolVar(&installPeer, "peer", false, "Add as peer dependency")
 	installCmd.Flags().BoolVarP(&installOptional, "optional", "O", false, "Add as optional dependency")
+}
+
+func runInstall(args []string) error {
+	workDir, err := getWorkingDir()
+	if err != nil {
+		return err
+	}
+
+	// If no packages specified, install all dependencies
+	if len(args) == 0 {
+		installCmd := pmcombo.NewInstallCommand(pmcombo.InstallOptions{
+			Frozen: false,
+		})
+
+		cmdArgs, err := installCmd.Concat(ctx.PackageManager)
+		if err != nil {
+			return err
+		}
+
+		return runner.Run(ctx.PackageManager, cmdArgs, workDir, runnerOpts())
+	}
+
+	// Otherwise, add the specified packages
+	addCmd := pmcombo.NewAddCommand(pmcombo.AddOptions{
+		Packages: args,
+		Dev:      installDev,
+		Exact:    installExact,
+		Global:   installGlobal,
+		Peer:     installPeer,
+		Optional: installOptional,
+	})
+
+	cmdArgs, err := addCmd.Concat(ctx.PackageManager)
+	if err != nil {
+		return err
+	}
+
+	return runner.Run(ctx.PackageManager, cmdArgs, workDir, runnerOpts())
 }

@@ -18,6 +18,7 @@ go install github.com/AkaraChen/gnpm/cmd/gnpm@latest
 
 ```bash
 # Works in any project - gnpm detects the package manager
+gnpm                  # Same as gnpm install
 gnpm install          # npm install / yarn install / pnpm install / bun install
 gnpm i react          # Add react (i is alias for install)
 gnpm add -D typescript
@@ -50,6 +51,7 @@ gnpm detects your package manager from lock files:
 
 | Command | Aliases | Description |
 |---------|---------|-------------|
+| `gnpm` | | Install all dependencies |
 | `gnpm install` | `i` | Install all dependencies |
 | `gnpm install <pkg>` | `i`, `a`, `add` | Add a package |
 | `gnpm install -D <pkg>` | | Add a dev dependency |

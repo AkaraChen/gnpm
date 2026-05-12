@@ -121,6 +121,42 @@ func TestE2E_Install(t *testing.T) {
 	}
 }
 
+func TestE2E_DefaultCommand(t *testing.T) {
+	cases := []struct {
+		dir      string
+		expected string
+	}{
+		{"npm-single", "npm install"},
+		{"yarn-classic-single", "yarn install"},
+		{"yarn-berry-single", "yarn install"},
+		{"pnpm-single", "pnpm install"},
+		{"deno-single", "deno install"},
+		{"bun-single", "bun install"},
+	}
+
+	gnpm := buildFnpm(t)
+
+	for _, tc := range cases {
+		t.Run(tc.dir, func(t *testing.T) {
+			cmd := exec.Command(gnpm, "--dry-run")
+			cmd.Dir = fixtureDir(t, tc.dir)
+
+			output, err := cmd.Output()
+			if err != nil {
+				if exitErr, ok := err.(*exec.ExitError); ok {
+					t.Fatalf("gnpm failed: %v\nstderr: %s", err, exitErr.Stderr)
+				}
+				t.Fatalf("failed to run gnpm: %v", err)
+			}
+
+			got := strings.TrimSpace(string(output))
+			if got != tc.expected {
+				t.Errorf("expected %q, got %q", tc.expected, got)
+			}
+		})
+	}
+}
+
 // =============================================================================
 // E2E Tests: Add Command
 // =============================================================================

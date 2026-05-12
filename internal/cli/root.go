@@ -33,10 +33,13 @@ var rootCmd = &cobra.Command{
 	Long: `gnpm is a fast, unified CLI that wraps npm, yarn, pnpm, deno, and bun.
 It detects your package manager from lock files and translates commands automatically.
 
+Running gnpm without a command defaults to install.
+
 Unknown commands are automatically resolved:
   1. As a script in package.json
   2. As a binary in node_modules/.bin
   3. As a system command`,
+	Args: cobra.NoArgs,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Skip context detection for commands that don't need it
 		if cmd.Name() == "help" || cmd.Name() == "completion" {
@@ -77,6 +80,9 @@ Unknown commands are automatically resolved:
 		}
 
 		return nil
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runInstall(args)
 	},
 }
 
